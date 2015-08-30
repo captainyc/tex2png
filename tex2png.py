@@ -2,7 +2,6 @@ import re
 import os
 import sys
 import urllib
-import feedparser
 import glob
 import argparse
 from itertools import repeat
