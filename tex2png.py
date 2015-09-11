@@ -344,7 +344,7 @@ def tex2png(input, output='out'):
 			preamble.append("\\usepackage{amsthm}\n")
 			preamble.append("\\usepackage{bm}\n")
 			preamble.append("\\usepackage{varwidth}\n")
-		elif re.search(r"(\\newcommand|\\def)(.*)\\(begin|end){(equation|align)", current):
+		elif re.search(r"(\\newcommand|\\def)(.*)\\(begin|end){(equation|align|eqnarray)", current):
 			newmacro = macro(current)
 			multilineFlag = newmacro.multiline
 			if multilineFlag:
@@ -423,6 +423,8 @@ def tex2png(input, output='out'):
 			while current.find(end)<0:
 				if re.search(r'\S', current):
 					formula_temp.append(current)
+				if len(unread)==0:
+					return
 				current = unread[0]
 				unread = unread[1:]
 			ind = current.find(end)
@@ -447,15 +449,21 @@ def tex2png(input, output='out'):
 		outputHandler.close()
 
 		os.system('pdflatex -interaction=nonstopmode %s.tex' %currentoutput)
-		#os.remove('%s.tex' % currentoutput)
+		os.remove('%s.tex' % currentoutput)
 		os.remove('%s.log' % currentoutput)
 		if os.path.isfile('%s.pdf' % currentoutput):
 			os.system('convert -density 300 %s.pdf -quality 90 %s.png' % (currentoutput, currentoutput))
 			os.remove('%s.pdf' % currentoutput)
+			if os.path.isfile('%s.png' % currentoutput):
+				os.rename('%s.png' % currentoutput, '/Users/Yuancheng/Downloads/figs/%s.png' % currentoutput)
 		if os.path.isfile('%s.aux' % currentoutput):
 			os.remove('%s.aux' % currentoutput)
 		if os.path.isfile('%s.out' % currentoutput):
 			os.remove('%s.out' % currentoutput)
+		if os.path.isfile('%s.idx' % currentoutput):
+			os.remove('%s.idx' % currentoutput)
+		if os.path.isfile('%s.synctex.gz' % currentoutput):
+			os.remove('%s.synctex.gz' % currentoutput)
 		i += 1
 
 def gunzip_and_tex2png(tarball):
