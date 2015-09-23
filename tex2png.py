@@ -8,7 +8,7 @@ from itertools import repeat
 import tarfile
 import multiprocessing
 import shutil
-
+from datetime import datetime
 
 def find_token(string):
 	string = re.search(r"^\s*(.*)",string).group(1)
@@ -404,7 +404,10 @@ def tex2png(input, output='out'):
 		temp.append(current)
 	unread = temp
 
+	labels = []
+	i = 0
 	while len(unread)>0:
+		labelFlag = False
 		current = unread[0]
 		unread = unread[1:]
 		matchFormula = formulaPat.search(current)
@@ -423,6 +426,8 @@ def tex2png(input, output='out'):
 			while current.find(end)<0:
 				if re.search(r'\S', current):
 					formula_temp.append(current)
+					if re.search(r"\\label", current):
+						labelFlag = True
 				if len(unread)==0:
 					return
 				current = unread[0]
@@ -432,10 +437,19 @@ def tex2png(input, output='out'):
 			if len(current)>ind+len(end)+1:
 				unread = [ current[ind+len(end)] ] + unread
 			formulas.append(formula_temp)
+			if labelFlag:
+				labels.append(i)
+			i += 1
+
+	if len(labels)>0:
+		formulas = [formulas[j] for j in labels]
+		upper = 20
+	else:
+		upper = 10
 
 	i = 1
 	for formula in formulas:
-		currentoutput = output+'_%d'%i
+		currentoutput = output+'_%03d'%i
 		outputHandler = open(currentoutput+'.tex', 'w')
 		for line in preamble:
 			outputHandler.write(line)
@@ -448,14 +462,14 @@ def tex2png(input, output='out'):
 		outputHandler.write("\\end{document}\n")
 		outputHandler.close()
 
-		os.system('pdflatex -interaction=nonstopmode %s.tex' %currentoutput)
-		os.remove('%s.tex' % currentoutput)
+		os.system('pdflatex -interaction=batchmode %s.tex' %currentoutput)
+		os.rename('%s.tex' % currentoutput, '/Users/Yuancheng/Downloads/eqntex/%s.tex' % currentoutput)
 		os.remove('%s.log' % currentoutput)
 		if os.path.isfile('%s.pdf' % currentoutput):
 			os.system('convert -density 300 %s.pdf -quality 90 %s.png' % (currentoutput, currentoutput))
 			os.remove('%s.pdf' % currentoutput)
 			if os.path.isfile('%s.png' % currentoutput):
-				os.rename('%s.png' % currentoutput, '/Users/Yuancheng/Downloads/figs/%s.png' % currentoutput)
+				os.rename('%s.png' % currentoutput, '/Users/Yuancheng/Downloads/eqnfig/%s.png' % currentoutput)
 		if os.path.isfile('%s.aux' % currentoutput):
 			os.remove('%s.aux' % currentoutput)
 		if os.path.isfile('%s.out' % currentoutput):
@@ -465,10 +479,14 @@ def tex2png(input, output='out'):
 		if os.path.isfile('%s.synctex.gz' % currentoutput):
 			os.remove('%s.synctex.gz' % currentoutput)
 		i += 1
+		if i > upper:
+			break
 
 def gunzip_and_tex2png(tarball):
 	tar = tarfile.open(tarball)
 	tar.extractall()
+
+	print str(datetime.now()) + " Processing %s..." % tarball.replace('.tar.gz','')
 
 	inputFile = None
 	for file in filter(lambda x: '.tex' in x, tar.getnames()):
@@ -504,8 +522,10 @@ def main():
 
 	if args.directory:
 		tarballs = glob.glob(args.inputName + '/*.tar.gz')
-		pool = multiprocessing.Pool(processes=1)
-		pool.map(gunzip_and_tex2png, tarballs)
+		#pool = multiprocessing.Pool(processes=1)
+		#pool.map(gunzip_and_tex2png, tarballs)
+		for tarball in tarballs:
+			gunzip_and_tex2png(tarball)
 	else:
 		tex2png(args.inputName)
 
